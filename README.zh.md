@@ -14,6 +14,49 @@
 
 状态：源码级替换已完成并端到端验证（构建、`test:gui`、重写后的 agent-loop 测试套件、基于 mock LLM 的 headless 冒烟、Web GUI）。全量测试：12434 通过 / 204 失败——失败为下游包断言旧循环精确语义（ACP/subagent/goal/retry/compaction/plan）加 Windows 环境问题；详见分析文档 §6.2 与 agent-loop README 的 Known Limitations。
 
+## 启动（Run）
+
+与下方原版 harness 一致，但 deepseek-pi 是源码检出、**未发布到 npm**，因此"从 npm 运行"不适用，只能从源码运行。
+
+### 前置
+
+安装 `Node.js`（≥ 22.19）与 `pnpm`（≥ 11），然后：
+
+```sh
+git clone <你的 deepseek-pi 仓库地址> deepseek-pi
+cd deepseek-pi
+pnpm install
+pnpm run build          # tsc 产出 lib/types，tsdown 打包运行时，vite 构建 web 前端
+```
+
+### Web UI
+
+```sh
+pnpm dsh web
+```
+
+该命令启动 Web UI，默认地址 `http://127.0.0.1:3080`——与原版界面一致（参见 [Web UI 指南](docs/user/guide/index.md)）。如果 `3080` 被占用（例如官方 harness 正在运行），换一个端口：
+
+```sh
+pnpm dsh web --port 3199        # http://127.0.0.1:3199
+```
+
+模型/提供方选择在 GUI 设置中完成（存储于 `~/.dsh/settings.yaml`）；凭证来自 `~/.dsh/.credentials.yaml` 或 `DEEPSEEK_API_KEY` 环境变量。
+
+### 命令行一次性任务
+
+```sh
+pnpm dsh --profile headless "总结一下本仓库的 README"
+```
+
+### 无 API key 试玩（仓库自带 mock LLM）
+
+```sh
+pnpm mock:llm --sequence success --repeat-last                     # 终端 1
+$env:DEEPSEEK_API_KEY = "mock"; $env:DEEPSEEK_BASE_URL = "http://127.0.0.1:8000/v1"
+pnpm dsh --profile headless "Say exactly: hello from pi loop"      # 终端 2
+```
+
 ## 如何从原版 DeepSeek Harness 嵌入 PI 内核（移植指南）
 
 在并列目录中放置 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 原版与 `pi/` 源码（Node ≥ 22.19，pnpm ≥ 11），按以下步骤复现 `deepseek-pi`：

@@ -14,6 +14,49 @@ Everything below this banner describes the shared DeepSeek Harness foundation, w
 
 Status: source-level swap complete and verified end-to-end (build, `test:gui`, rewritten agent-loop suite, headless smoke against the mock LLM, web GUI). Full test suite: 12434 pass / 204 fail — the failures are downstream specs asserting the old loop's exact semantics (ACP/subagent/goal/retry/compaction/plan) plus Windows-environmental issues; see the analysis doc §6.2 and the agent-loop README's Known Limitations.
 
+## Run / 启动
+
+Same as the upstream harness below, except that deepseek-pi is a source checkout — it is not published to npm, so "Run from `npm`" does not apply; run from source only.
+
+### Prerequisites
+
+Install `Node.js` (≥ 22.19) and `pnpm` (≥ 11), then:
+
+```sh
+git clone <your-deepseek-pi-url> deepseek-pi
+cd deepseek-pi
+pnpm install
+pnpm run build          # tsc emits lib/types, tsdown bundles runtime, vite builds the web frontend
+```
+
+### Web UI
+
+```sh
+pnpm dsh web
+```
+
+The command starts the Web UI, served at `http://127.0.0.1:3080` by default — the same interface as upstream's (see [Web UI guide](docs/user/guide/index.md)). If port `3080` is already taken (for example by the upstream harness running alongside), pick another port:
+
+```sh
+pnpm dsh web --port 3199        # http://127.0.0.1:3199
+```
+
+Model/provider selection lives in the GUI's settings (stored in `~/.dsh/settings.yaml`); credentials come from `~/.dsh/.credentials.yaml` or `DEEPSEEK_API_KEY`.
+
+### Headless one-shot task
+
+```sh
+pnpm dsh --profile headless "summarize this repository's README"
+```
+
+### Try it without an API key (bundled mock LLM)
+
+```sh
+pnpm mock:llm --sequence success --repeat-last                     # terminal 1
+DEEPSEEK_API_KEY=mock DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1 \
+  pnpm dsh --profile headless "Say exactly: hello from pi loop"    # terminal 2
+```
+
 ## How this fork was made (porting guide)
 
 Steps to reproduce `deepseek-pi` from an upstream checkout of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) (sibling dirs: `deepseek-harness/`, `pi/`; Node ≥ 22.19, pnpm ≥ 11).
