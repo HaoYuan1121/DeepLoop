@@ -4,39 +4,34 @@ English | [中文](README.zh.md)
 
 **DeepLoop = DeepSeek Harness skeleton + PI's agent loop (loop engineering).**
 
-This repository is a derivative of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) in which the harness's own agent driver (`ReactLoopAgent` in `packages/core/agent-loop`) is replaced by PI's agent engine — the "loop engineering" approach of [Pi Coding Agent](https://github.com/earendil-works/pi) — vendored as `@deepseek-pi/pi-agent-core` (+ `@deepseek-pi/pi-ai`) under `vendor/`.
+DeepLoop is a derivative of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) in which the harness's own agent driver (`ReactLoopAgent` in `packages/core/agent-loop`) is replaced by PI's agent engine — the "loop engineering" approach of [Pi Coding Agent](https://github.com/earendil-works/pi) — vendored as `@deepseek-pi/pi-agent-core` (+ `@deepseek-pi/pi-ai`) under `vendor/`.
 
-deepseek-pi inherits the DeepSeek Harness foundation unchanged except for the agent loop. See:
-
+DeepLoop inherits the DeepSeek Harness foundation unchanged except for the agent loop. See:
 - [docs/pi-agent-swap-analysis.md](docs/pi-agent-swap-analysis.md) — the feasibility analysis (why the swap is sound, interface mapping, risks).
 - [packages/core/agent-loop/README.md](packages/core/agent-loop/README.md) — the swapped loop: `PiLoopAgent` adapter, `pi-model` / `pi-stream` / `pi-tools` bridges, and known limitations.
 - [vendor/README.md](vendor/README.md) — the vendored PI packages manifest and local-modification log.
 
 Status: source-level swap complete and verified end-to-end (build, `test:gui`, rewritten agent-loop suite, headless smoke against the mock LLM, web GUI). Full test suite: 12434 pass / 204 fail — the failures are downstream specs asserting the old loop's exact semantics (ACP/subagent/goal/retry/compaction/plan) plus Windows-environmental issues; see the analysis doc §6.2 and the agent-loop README's Known Limitations.
 
-## Why this swap (motivation)
+## Quick start
 
-The swap combines the strengths of both projects:
-
-- **PI's agent loop completes most tasks well.** In practice pi-agent's loop engineering finishes the large majority of tasks successfully, with high efficiency and little per-turn overhead.
-- **DeepSeek Harness keeps a high KV-cache hit rate.** Its session log folds request headers and appends events incrementally, so each request reuses already-cached context for most of its content.
-
-Driving the harness's cache-friendly session layer with PI's loop is expected to cut token usage substantially: the loop sends fewer, leaner requests, and the harness maximizes cached-context reuse. The saving is a hypothesis, not yet measured — the actual experience awaits real users.
-
-## Run / 启动
-
-deepseek-pi is a source checkout — it is not published to npm, so "Run from `npm`" does not apply; run from source only.
+DeepLoop is a source checkout — it is not published to npm, so run it from source only.
 
 ### Prerequisites
 
-Install `Node.js` (≥ 22.19) and `pnpm` (≥ 11), then:
+- [Node.js](https://nodejs.org) ≥ 22.19
+- [pnpm](https://pnpm.io) ≥ 11
+
+### Clone, install, and build
 
 ```sh
-git clone <your-deepseek-pi-url> deepseek-pi
-cd deepseek-pi
+git clone https://github.com/HaoYuan1121/DeepLoop.git
+cd DeepLoop
 pnpm install
-pnpm run build          # tsc emits lib/types, tsdown bundles runtime, vite builds the web frontend
+pnpm run build
 ```
+
+`pnpm run build` produces everything in one pass: `tsc` emits TypeScript declarations to `lib/types`, `tsdown` bundles the runtime, and `vite` builds the web frontend.
 
 ### Web UI
 
@@ -44,13 +39,13 @@ pnpm run build          # tsc emits lib/types, tsdown bundles runtime, vite buil
 pnpm dsh web
 ```
 
-The command starts the Web UI, served at `http://127.0.0.1:3080` by default — the same interface as upstream's (see [Web UI guide](docs/user/guide/index.md)). If port `3080` is already taken (for example by the upstream harness running alongside), pick another port:
+Starts the Web UI at `http://127.0.0.1:3080` by default — the same interface as upstream's (see [Web UI guide](docs/user/guide/index.md)). If port `3080` is already taken (for example by the upstream harness running alongside), pick another port:
 
 ```sh
 pnpm dsh web --port 3199        # http://127.0.0.1:3199
 ```
 
-Model/provider selection lives in the GUI's settings (stored in `~/.dsh/settings.yaml`); credentials come from `~/.dsh/.credentials.yaml` or `DEEPSEEK_API_KEY`.
+Model and provider selection live in the GUI's settings (stored in `~/.dsh/settings.yaml`); credentials come from `~/.dsh/.credentials.yaml` or the `DEEPSEEK_API_KEY` environment variable.
 
 ### Headless one-shot task
 
@@ -65,6 +60,18 @@ pnpm mock:llm --sequence success --repeat-last                     # terminal 1
 DEEPSEEK_API_KEY=mock DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1 \
   pnpm dsh --profile headless "Say exactly: hello from pi loop"    # terminal 2
 ```
+
+## Configuration
+
+Model/provider selection lives in the GUI settings (`~/.dsh/settings.yaml`). Credentials come from `~/.dsh/.credentials.yaml` or the `DEEPSEEK_API_KEY` environment variable. See [docs/user/guide/providers.md](docs/user/guide/providers.md) for supported providers and their configuration.
+
+## Why this swap
+
+The swap combines the strengths of both projects:
+- **PI's agent loop completes most tasks well.** In practice pi-agent's loop engineering finishes the large majority of tasks successfully, with high efficiency and little per-turn overhead.
+- **DeepSeek Harness keeps a high KV-cache hit rate.** Its session log folds request headers and appends events incrementally, so each request reuses already-cached context for most of its content.
+
+Driving the harness's cache-friendly session layer with PI's loop is expected to cut token usage substantially: the loop sends fewer, leaner requests, and the harness maximizes cached-context reuse. The saving is a hypothesis, not yet measured — the actual experience awaits real users.
 
 ## How this fork was made (porting guide)
 

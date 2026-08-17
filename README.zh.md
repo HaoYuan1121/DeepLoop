@@ -2,41 +2,36 @@
 
 [English](README.md) | 中文
 
-**DeepLoop = DeepSeek Harness 骨架 + PI 的 agent loop（loop engineering，循环工程）。**
+**DeepLoop = DeepSeek Harness 骨架 + PI 的 agent loop（循环工程）。**
 
-本仓库是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的衍生版本：把 harness 自带的 agent 驱动器（`packages/core/agent-loop` 中的 `ReactLoopAgent`）替换为 [Pi Coding Agent](https://github.com/earendil-works/pi) 的 agent 引擎——即 "loop engineering" 实践——并以 `@deepseek-pi/pi-agent-core`（+ `@deepseek-pi/pi-ai`）形式 vendored 到 `vendor/` 下。
+DeepLoop 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的衍生版本：把 harness 自带的 agent 驱动器（`packages/core/agent-loop` 中的 `ReactLoopAgent`）替换为 [Pi Coding Agent](https://github.com/earendil-works/pi) 的 agent 引擎——即 "loop engineering" 实践——并以 `@deepseek-pi/pi-agent-core`（+ `@deepseek-pi/pi-ai`）形式 vendored 到 `vendor/` 下。
 
-deepseek-pi 除 agent loop 外原样继承 DeepSeek Harness 基础。参见：
-
+DeepLoop 除 agent loop 外原样继承 DeepSeek Harness 基础。参见：
 - [docs/pi-agent-swap-analysis.md](docs/pi-agent-swap-analysis.md) —— 可行性分析（替换为何合理、接口映射、风险）。
 - [packages/core/agent-loop/README.md](packages/core/agent-loop/README.md) —— 被替换的循环：`PiLoopAgent` 适配器、`pi-model` / `pi-stream` / `pi-tools` 桥接、已知限制。
 - [vendor/README.md](vendor/README.md) —— vendored PI 包清单与本地修改日志。
 
 状态：源码级替换已完成并端到端验证（构建、`test:gui`、重写后的 agent-loop 测试套件、基于 mock LLM 的 headless 冒烟、Web GUI）。全量测试：12434 通过 / 204 失败——失败为下游包断言旧循环精确语义（ACP/subagent/goal/retry/compaction/plan）加 Windows 环境问题；详见分析文档 §6.2 与 agent-loop README 的 Known Limitations。
 
-## 为什么这样改（动机）
+## 快速开始（Quick start）
 
-本次替换结合了两家的长处：
+DeepLoop 是源码检出、**未发布到 npm**，因此只能从源码运行。
 
-- **PI 的 agent loop 完成度高、效率好。** 实践中 pi-agent 的 loop engineering 能以较高效率基本成功完成大部分任务，每次 turn 的额外开销很小。
-- **DeepSeek Harness 的 KV-cache 命中率极高。** 其会话日志折叠请求头、增量追加事件，使每次请求的大部分内容都能复用已缓存的上下文。
+### 环境要求（Prerequisites）
 
-用 PI 的 loop 驱动 harness 缓存友好的会话层，有望显著节省 token：loop 发出的请求更少、更精简，harness 则最大化缓存复用。这一节省目前仍是假设、未经实测，实际体验有待真实用户验证。
+- [Node.js](https://nodejs.org) ≥ 22.19
+- [pnpm](https://pnpm.io) ≥ 11
 
-## 启动（Run）
-
-deepseek-pi 是源码检出、**未发布到 npm**，因此"从 npm 运行"不适用，只能从源码运行。
-
-### 前置
-
-安装 `Node.js`（≥ 22.19）与 `pnpm`（≥ 11），然后：
+### 克隆、安装与构建（Clone, install, and build）
 
 ```sh
-git clone <你的 deepseek-pi 仓库地址> deepseek-pi
-cd deepseek-pi
+git clone https://github.com/HaoYuan1121/DeepLoop.git
+cd DeepLoop
 pnpm install
-pnpm run build          # tsc 产出 lib/types，tsdown 打包运行时，vite 构建 web 前端
+pnpm run build
 ```
+
+`pnpm run build` 一次完成全部产物：`tsc` 产出 TypeScript 声明到 `lib/types`，`tsdown` 打包运行时，`vite` 构建 web 前端。
 
 ### Web UI
 
@@ -44,7 +39,7 @@ pnpm run build          # tsc 产出 lib/types，tsdown 打包运行时，vite �
 pnpm dsh web
 ```
 
-该命令启动 Web UI，默认地址 `http://127.0.0.1:3080`——与原版界面一致（参见 [Web UI 指南](docs/user/guide/index.md)）。如果 `3080` 被占用（例如官方 harness 正在运行），换一个端口：
+启动 Web UI，默认地址 `http://127.0.0.1:3080`——与原版界面一致（参见 [Web UI 指南](docs/user/guide/index.md)）。如果 `3080` 被占用（例如官方 harness 正在运行），换一个端口：
 
 ```sh
 pnpm dsh web --port 3199        # http://127.0.0.1:3199
@@ -52,19 +47,31 @@ pnpm dsh web --port 3199        # http://127.0.0.1:3199
 
 模型/提供方选择在 GUI 设置中完成（存储于 `~/.dsh/settings.yaml`）；凭证来自 `~/.dsh/.credentials.yaml` 或 `DEEPSEEK_API_KEY` 环境变量。
 
-### 命令行一次性任务
+### 命令行一次性任务（Headless one-shot task）
 
 ```sh
-pnpm dsh --profile headless "总结一下本仓库的 README"
+pnpm dsh --profile headless "summarize this repository's README"
 ```
 
 ### 无 API key 试玩（仓库自带 mock LLM）
 
 ```sh
-pnpm mock:llm --sequence success --repeat-last                     # 终端 1
-$env:DEEPSEEK_API_KEY = "mock"; $env:DEEPSEEK_BASE_URL = "http://127.0.0.1:8000/v1"
-pnpm dsh --profile headless "Say exactly: hello from pi loop"      # 终端 2
+pnpm mock:llm --sequence success --repeat-last                     # terminal 1
+DEEPSEEK_API_KEY=mock DEEPSEEK_BASE_URL=http://127.0.0.1:8000/v1 \
+  pnpm dsh --profile headless "Say exactly: hello from pi loop"    # terminal 2
 ```
+
+## 配置（Configuration）
+
+模型/提供方选择在 GUI 设置中完成（`~/.dsh/settings.yaml`）。凭证来自 `~/.dsh/.credentials.yaml` 或 `DEEPSEEK_API_KEY` 环境变量。支持的提供方及其配置见 [docs/user/guide/providers.md](docs/user/guide/providers.md)。
+
+## 为什么这样改（Why this swap）
+
+本次替换结合了两家的长处：
+- **PI 的 agent loop 完成度高、效率好。** 实践中 pi-agent 的 loop engineering 能以较高效率基本成功完成大部分任务，每次 turn 的额外开销很小。
+- **DeepSeek Harness 的 KV-cache 命中率极高。** 其会话日志折叠请求头、增量追加事件，使每次请求的大部分内容都能复用已缓存的上下文。
+
+用 PI 的 loop 驱动 harness 缓存友好的会话层，有望显著节省 token：loop 发出的请求更少、更精简，harness 则最大化缓存复用。这一节省目前仍是假设、未经实测，实际体验有待真实用户验证。
 
 ## 如何从原版 DeepSeek Harness 嵌入 PI 内核（移植指南）
 
@@ -100,20 +107,20 @@ pnpm dsh --profile headless "Say exactly: hello from pi loop"      # 终端 2
 
    ```powershell
    pnpm install
-   pnpm run build:lib:host          # 编译被替换的循环 + 整个 harness
-   pnpm run test:gui                # client/host GUI 套件（3783 个测试）
-   pnpm run build:lib:client        # client 面 lib（含 lib/styles）
-   pnpm run build:web               # web 前端
-   pnpm dsh web --port 3199         # Web GUI（3080 是原版 harness 的端口）
+   pnpm run build:lib:host          # compiles the swapped loop + whole harness
+   pnpm run test:gui                # client/host GUI suites (3783 tests)
+   pnpm run build:lib:client        # client-face libs (incl. lib/styles)
+   pnpm run build:web               # web frontend
+   pnpm dsh web --port 3199         # web GUI (port 3080 is the upstream harness's)
 
-   # 无 key 端到端冒烟：
-   pnpm mock:llm --sequence success --repeat-last          # 终端 1
+   # keyless end-to-end smoke:
+   pnpm mock:llm --sequence success --repeat-last          # terminal 1
    $env:DEEPSEEK_API_KEY = "mock"; $env:DEEPSEEK_BASE_URL = "http://127.0.0.1:8000/v1"
-   pnpm dsh --profile headless "Say exactly: hello from pi loop"   # 终端 2
+   pnpm dsh --profile headless "Say exactly: hello from pi loop"   # terminal 2
    ```
 
 7. **了解差异**：阅读 `packages/core/agent-loop/README.md` 的 Known Limitations——turn 粒度（每次助手响应对应一个 harness turn）、串行工具执行（`maxParallelToolCalls` 接受但未强制）、无 `assistant/chunk` 流式增量、`agent/request-error` 重试恢复尚未接入、图像内容在块边界被丢弃。
 
-## 许可证
+## 许可证（License）
 
 [MIT](LICENSE)——DeepLoop 由 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 骨架（© 2026 DeepSeek）与 [PI agent loop](https://github.com/earendil-works/pi)（© 2025 Mario Zechner）组合而成，两处上游 MIT 声明均予保留。vendored 与运行时第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
