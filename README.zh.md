@@ -1,12 +1,12 @@
-# deepseek-pi
+# DeepLoop
 
 [English](README.md) | 中文
 
-**deepseek-pi = DeepSeek Harness 骨架 + PI 的 agent loop（loop engineering，循环工程）。**
+**DeepLoop = DeepSeek Harness 骨架 + PI 的 agent loop（loop engineering，循环工程）。**
 
 本仓库是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 的衍生版本：把 harness 自带的 agent 驱动器（`packages/core/agent-loop` 中的 `ReactLoopAgent`）替换为 [Pi Coding Agent](https://github.com/earendil-works/pi) 的 agent 引擎——即 "loop engineering" 实践——并以 `@deepseek-pi/pi-agent-core`（+ `@deepseek-pi/pi-ai`）形式 vendored 到 `vendor/` 下。
 
-下方横幅以外的内容描述共享的 DeepSeek Harness 基础，deepseek-pi 除 agent loop 外原样继承。参见：
+deepseek-pi 除 agent loop 外原样继承 DeepSeek Harness 基础。参见：
 
 - [docs/pi-agent-swap-analysis.md](docs/pi-agent-swap-analysis.md) —— 可行性分析（替换为何合理、接口映射、风险）。
 - [packages/core/agent-loop/README.md](packages/core/agent-loop/README.md) —— 被替换的循环：`PiLoopAgent` 适配器、`pi-model` / `pi-stream` / `pi-tools` 桥接、已知限制。
@@ -14,9 +14,18 @@
 
 状态：源码级替换已完成并端到端验证（构建、`test:gui`、重写后的 agent-loop 测试套件、基于 mock LLM 的 headless 冒烟、Web GUI）。全量测试：12434 通过 / 204 失败——失败为下游包断言旧循环精确语义（ACP/subagent/goal/retry/compaction/plan）加 Windows 环境问题；详见分析文档 §6.2 与 agent-loop README 的 Known Limitations。
 
+## 为什么这样改（动机）
+
+本次替换结合了两家的长处：
+
+- **PI 的 agent loop 完成度高、效率好。** 实践中 pi-agent 的 loop engineering 能以较高效率基本成功完成大部分任务，每次 turn 的额外开销很小。
+- **DeepSeek Harness 的 KV-cache 命中率极高。** 其会话日志折叠请求头、增量追加事件，使每次请求的大部分内容都能复用已缓存的上下文。
+
+用 PI 的 loop 驱动 harness 缓存友好的会话层，有望显著节省 token：loop 发出的请求更少、更精简，harness 则最大化缓存复用。这一节省目前仍是假设、未经实测，实际体验有待真实用户验证。
+
 ## 启动（Run）
 
-与下方原版 harness 一致，但 deepseek-pi 是源码检出、**未发布到 npm**，因此"从 npm 运行"不适用，只能从源码运行。
+deepseek-pi 是源码检出、**未发布到 npm**，因此"从 npm 运行"不适用，只能从源码运行。
 
 ### 前置
 
@@ -105,77 +114,6 @@ pnpm dsh --profile headless "Say exactly: hello from pi loop"      # 终端 2
 
 7. **了解差异**：阅读 `packages/core/agent-loop/README.md` 的 Known Limitations——turn 粒度（每次助手响应对应一个 harness turn）、串行工具执行（`maxParallelToolCalls` 接受但未强制）、无 `assistant/chunk` 流式增量、`agent/request-error` 重试恢复尚未接入、图像内容在块边界被丢弃。
 
----
-
-# DeepSeek Harness
-
-DeepSeek Harness（`dsh`）是由 [DeepSeek AI](https://deepseek.com) 开发的开源 agent harness（智能体框架）。
-
-它采用**一切皆插件**的架构，并由 [Cordis](https://github.com/cordiverse/cordis) 驱动，其设计参见论文 [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper)。
-
-## 开发者预览
-
-DeepSeek Harness 目前处于 _开发者预览_ 阶段，正在快速迭代。**未来将出现破坏兼容性的变更。**
-
-## 运行
-
-### 通过 `npm` 运行
-
-安装 `Node.js`，然后运行：
-
-```sh
-npx @deepseek-ai/dsh web
-```
-
-该命令会启动 Web UI，默认地址为 `http://127.0.0.1:3080`。详见 [Web UI 指南](docs/user/guide/index.md)。
-
-### 从源码运行
-
-如需从仓库源码运行：
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web
-```
-
-## 社区与支持
-
-- 欢迎通过 [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions) 提交反馈或 bug 报告。
-- 为你的插件仓库添加 [`dsh-plugin`](https://github.com/topics/dsh-plugin) 话题，便于被发现。
-- 欢迎加入 DeepSeek Harness 企微群：扫码添加企微小助手并填写入群问卷，完成后小助手会邀请你入群。
-
-<table>
-  <thead>
-    <tr>
-      <th align="center">企微小助手</th>
-      <th align="center">入群问卷</th>
-      <th align="center">微信公众号</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td align="center"><img src="assets/community-wecom-assistant.png" alt="DeepSeek Harness 企微小助手二维码" width="180" height="180"></td>
-      <td align="center"><a href="https://trtgsjkv6r.feishu.cn/share/base/form/shrcnIt5twSVdLGD52KJBckGCgg"><img src="assets/community-wecom-survey.png" alt="DeepSeek Harness 入群问卷二维码" width="180" height="180"></a></td>
-      <td align="center"><img src="assets/community-wechat-official-account.png" alt="DeepSeek Harness 团队微信公众号二维码" width="180" height="180"></td>
-    </tr>
-  </tbody>
-</table>
-
-## 参与贡献
-
-参见 [CONTRIBUTING.md](CONTRIBUTING.md)。
-
-## 开发
-
-请先阅读[开发指南](docs/development.md)与[架构文档](docs/architecture.md)。
-
-面向 agent：请遵循 [AGENTS.md](AGENTS.md)。
-
 ## 许可证
 
-[MIT](LICENSE)
-
-第三方依赖及其许可证见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+[MIT](LICENSE)——DeepLoop 由 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 骨架（© 2026 DeepSeek）与 [PI agent loop](https://github.com/earendil-works/pi)（© 2025 Mario Zechner）组合而成，两处上游 MIT 声明均予保留。vendored 与运行时第三方许可见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。

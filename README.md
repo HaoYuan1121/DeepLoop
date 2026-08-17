@@ -1,12 +1,12 @@
-# deepseek-pi
+# DeepLoop
 
 English | [中文](README.zh.md)
 
-**deepseek-pi = DeepSeek Harness skeleton + PI's agent loop (loop engineering).**
+**DeepLoop = DeepSeek Harness skeleton + PI's agent loop (loop engineering).**
 
 This repository is a derivative of [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) in which the harness's own agent driver (`ReactLoopAgent` in `packages/core/agent-loop`) is replaced by PI's agent engine — the "loop engineering" approach of [Pi Coding Agent](https://github.com/earendil-works/pi) — vendored as `@deepseek-pi/pi-agent-core` (+ `@deepseek-pi/pi-ai`) under `vendor/`.
 
-Everything below this banner describes the shared DeepSeek Harness foundation, which deepseek-pi inherits unchanged except for the agent loop. See:
+deepseek-pi inherits the DeepSeek Harness foundation unchanged except for the agent loop. See:
 
 - [docs/pi-agent-swap-analysis.md](docs/pi-agent-swap-analysis.md) — the feasibility analysis (why the swap is sound, interface mapping, risks).
 - [packages/core/agent-loop/README.md](packages/core/agent-loop/README.md) — the swapped loop: `PiLoopAgent` adapter, `pi-model` / `pi-stream` / `pi-tools` bridges, and known limitations.
@@ -14,9 +14,18 @@ Everything below this banner describes the shared DeepSeek Harness foundation, w
 
 Status: source-level swap complete and verified end-to-end (build, `test:gui`, rewritten agent-loop suite, headless smoke against the mock LLM, web GUI). Full test suite: 12434 pass / 204 fail — the failures are downstream specs asserting the old loop's exact semantics (ACP/subagent/goal/retry/compaction/plan) plus Windows-environmental issues; see the analysis doc §6.2 and the agent-loop README's Known Limitations.
 
+## Why this swap (motivation)
+
+The swap combines the strengths of both projects:
+
+- **PI's agent loop completes most tasks well.** In practice pi-agent's loop engineering finishes the large majority of tasks successfully, with high efficiency and little per-turn overhead.
+- **DeepSeek Harness keeps a high KV-cache hit rate.** Its session log folds request headers and appends events incrementally, so each request reuses already-cached context for most of its content.
+
+Driving the harness's cache-friendly session layer with PI's loop is expected to cut token usage substantially: the loop sends fewer, leaner requests, and the harness maximizes cached-context reuse. The saving is a hypothesis, not yet measured — the actual experience awaits real users.
+
 ## Run / 启动
 
-Same as the upstream harness below, except that deepseek-pi is a source checkout — it is not published to npm, so "Run from `npm`" does not apply; run from source only.
+deepseek-pi is a source checkout — it is not published to npm, so "Run from `npm`" does not apply; run from source only.
 
 ### Prerequisites
 
@@ -105,60 +114,6 @@ Steps to reproduce `deepseek-pi` from an upstream checkout of [DeepSeek Harness]
 
 7. **Know the differences**: read `packages/core/agent-loop/README.md` (Known Limitations) — turn granularity (one harness turn per assistant response), sequential tool execution (`maxParallelToolCalls` accepted but not enforced), no streamed `assistant/chunk` deltas, no `agent/request-error` retry recovery yet, image content dropped at the block boundary.
 
----
-
-# DeepSeek Harness
-
-DeepSeek Harness (`dsh`) is an open-source agent harness developed by [DeepSeek AI](https://deepseek.com).
-
-It uses an architecture where **everything is a plugin**, and is powered by [Cordis](https://github.com/cordiverse/cordis), whose design is described in [_A Programming Paradigm for Spatiotemporal Composability_](https://github.com/cordiverse/paper).
-
-## Developer preview
-
-DeepSeek Harness is currently in _developer preview_ and is iterating rapidly. **THERE WILL BE COMPATIBILITY-BREAKING CHANGES.**
-
-## Run
-
-### Run from `npm`
-
-Install `Node.js`, then run:
-
-```sh
-npx @deepseek-ai/dsh web
-```
-
-The command starts the Web UI, served at `http://127.0.0.1:3080` by default. See [Web UI guide](docs/user/guide/index.md).
-
-### Run from source
-
-To run from a repository checkout:
-
-```sh
-git clone https://github.com/deepseek-ai/deepseek-harness.git
-cd deepseek-harness
-pnpm install
-pnpm run build
-pnpm dsh web
-```
-
-## Community and support
-
-- Feel free to submit feedback or bug reports through [GitHub Discussions](https://github.com/deepseek-ai/deepseek-harness/discussions).
-- Add the [`dsh-plugin`](https://github.com/topics/dsh-plugin) topic to your plugin repository for discoverability.
-- Join <a href="https://discord.gg/Ycq5dCaS4">DeepSeek Harness Discord community</a>.
-
-## Contributing
-
-See [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## Development
-
-Start with the [development guide](docs/development.md) and [architecture documentation](docs/architecture.md).
-
-For agents, follow [AGENTS.md](AGENTS.md).
-
 ## License
 
-[MIT](LICENSE)
-
-Third-party dependencies and their licenses are disclosed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[MIT](LICENSE) — DeepLoop combines the [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) skeleton (© 2026 DeepSeek) and the [PI agent loop](https://github.com/earendil-works/pi) (© 2025 Mario Zechner); both upstream MIT notices are preserved. Vendored and runtime third-party licenses are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

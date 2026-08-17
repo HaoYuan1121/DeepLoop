@@ -2,6 +2,7 @@
   "name": "@deepseek-ai/dsh-root",
   "version": "0.1.0-rc.7",
   "license": "MIT",
+  "author": "DeepLoop contributors",
   "private": true,
   "type": "module",
   "packageManager": "pnpm@11.7.0",
