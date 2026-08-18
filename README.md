@@ -25,7 +25,7 @@ DeepLoop is a source checkout — it is not published to npm, so run it from sou
 ### Clone, install, and build
 
 ```sh
-git clone https://github.com/HaoYuan1121/DeepLoop.git
+git clone https://github.com/howforever2000/DeepLoop.git
 cd DeepLoop
 pnpm install
 pnpm run build
